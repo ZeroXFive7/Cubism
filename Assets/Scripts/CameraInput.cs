@@ -47,6 +47,8 @@ public class CameraInput : MonoBehaviour
             GetComponent<Rigidbody>().freezeRotation = true;
         }
 
-        Screen.lockCursor = true;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
     }
 }
