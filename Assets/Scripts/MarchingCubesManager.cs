@@ -331,36 +331,26 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     {
         float pointOffset = 1.0f / (float)size;
 
-        int vertexCount = size * size * size;
-        Vector3[] positions = new Vector3[vertexCount];
-        int[] indices = new int[vertexCount * 3];
-        int index = 0;
+        int pointCount = size * size * size;
+        Vector3[] points = new Vector3[pointCount];
+        int[] indices = new int[pointCount];
 
+        int index = 0;
         for (int i = 0; i < size; ++i)
         {
             for (int j = 0; j < size; ++j)
             {
                 for (int k = 0; k < size; ++k)
                 {
-                    positions[index++] = new Vector3(i, j, k) * pointOffset;
+                    points[index] = new Vector3(i, j, k) * pointOffset;
+                    indices[index] = index++;
                 }
             }
         }
 
-        // Unity meshes must have an index buffer.  Just create degenerate triangles.
-        index = 0;
-        for (int i = 0; i < vertexCount * 3; i += 3)
-        {
-            indices[i] = index;
-            indices[i + 1] = index;
-            indices[i + 2] = index;
-            ++index;
-        }
-
-        return new Mesh()
-        {
-            vertices = positions,
-            triangles = indices
-        };
+        Mesh mesh = new Mesh();
+        mesh.vertices = points;
+        mesh.SetIndices(indices, MeshTopology.Points, 0);
+        return mesh;
     }
 }
