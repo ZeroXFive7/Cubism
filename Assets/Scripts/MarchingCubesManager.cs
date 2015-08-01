@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
+using System.Collections;
 
-public class VoxelMeshGenerator : MonoBehaviour
+public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 {
-    private readonly int[,] voxelCases = new int[256,16]
+    #region Constants
+
+    private readonly int[,] cubeCases = new int[256, 16]
     {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -263,19 +265,96 @@ public class VoxelMeshGenerator : MonoBehaviour
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
     };
 
-    private ComputeShader meshGenerationComputeShader = null;
-    private ComputeBuffer voxelCaseComputeBuffer = null;
+    private readonly Vector4[] cornerOffsets = new Vector4[8]
+    {
+        new Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+        new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
+        new Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+        new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+        new Vector4(0.0f, 0.0f, 1.0f, 1.0f),
+        new Vector4(0.0f, 1.0f, 1.0f, 1.0f),
+        new Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+        new Vector4(1.0f, 0.0f, 1.0f, 1.0f)
+    };
+
+    #endregion
+
+    [SerializeField]
+    private Material material = null;
+    [SerializeField]
+    private int blockSize = 32;
+
+    [HideInInspector]
+    public Mesh VoxelBlockMesh { get; private set; }
+
+    private string cubeCasesShaderFieldName = "MarchingCubesCaseLookup";
+    private ComputeBuffer cubeCasesComputeBuffer = null;
+
+    private string cornerOffsetsFieldName = "MarchingCubesCornerOffsets";
+    private ComputeBuffer cornerOffsetsComputeBuffer = null;
 
     private void Awake()
     {
-        voxelCaseComputeBuffer = new ComputeBuffer(voxelCases.GetLength(0), voxelCases.GetLength(1) * sizeof(int));
-        voxelCaseComputeBuffer.SetData(voxelCases);
+        Instance = this;
 
-        Shader.SetGlobalBuffer("VoxelCaseTable", voxelCaseComputeBuffer);
+        cubeCasesComputeBuffer = new ComputeBuffer(256 * 16, sizeof(int));
+        cubeCasesComputeBuffer.SetData(cubeCases);
+
+        cornerOffsetsComputeBuffer = new ComputeBuffer(8, 4 * sizeof(float));
+        cornerOffsetsComputeBuffer.SetData(cornerOffsets);
+
+        material.SetBuffer(cubeCasesShaderFieldName, cubeCasesComputeBuffer);
+        material.SetBuffer(cornerOffsetsFieldName, cornerOffsetsComputeBuffer);
+
+        VoxelBlockMesh = GenerateVoxelBlockMesh(blockSize);
     }
 
     private void OnDestroy()
     {
-        voxelCaseComputeBuffer.Release();
+        if (VoxelBlockMesh != null)
+        {
+            Destroy(VoxelBlockMesh);
+        }
+
+        if (cubeCasesComputeBuffer != null)
+        {
+            cubeCasesComputeBuffer.Dispose();
+        }
+
+        if (cornerOffsetsComputeBuffer != null)
+        {
+            cornerOffsetsComputeBuffer.Dispose();
+        }
+    }
+
+    private Mesh GenerateVoxelBlockMesh(int size)
+    {
+        float pointOffset = 1.0f / (float)size;
+
+        int vertexCount = size * size * size;
+        Vector3[] positions = new Vector3[vertexCount];
+        int[] indices = new int[vertexCount];
+        int index = 0;
+
+        for (int i = 0; i < size; ++i)
+        {
+            for (int j = 0; j < size; ++j)
+            {
+                for (int k = 0; k < size; ++k)
+                {
+                    positions[index++] = new Vector3(i, j, k) * pointOffset;
+                }
+            }
+        }
+
+        for (int i = 0; i < vertexCount; ++i)
+        {
+            indices[i] = i;
+        }
+
+        return new Mesh()
+        {
+            vertices = positions
+        };
     }
 }
