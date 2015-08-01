@@ -333,7 +333,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 
         int vertexCount = size * size * size;
         Vector3[] positions = new Vector3[vertexCount];
-        int[] indices = new int[vertexCount];
+        int[] indices = new int[vertexCount * 3];
         int index = 0;
 
         for (int i = 0; i < size; ++i)
@@ -347,14 +347,20 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
             }
         }
 
-        for (int i = 0; i < vertexCount; ++i)
+        // Unity meshes must have an index buffer.  Just create degenerate triangles.
+        index = 0;
+        for (int i = 0; i < vertexCount * 3; i += 3)
         {
-            indices[i] = i;
+            indices[i] = index;
+            indices[i + 1] = index;
+            indices[i + 2] = index;
+            ++index;
         }
 
         return new Mesh()
         {
-            vertices = positions
+            vertices = positions,
+            triangles = indices
         };
     }
 }
