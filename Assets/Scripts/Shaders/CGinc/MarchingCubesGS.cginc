@@ -10,7 +10,6 @@ struct v2g
 struct g2f
 {
     float4 pos : POSITION;
-    float4 color : TEXCOORD0;
 };
 
 v2g MarchingCubes_vert(float4 vertex : POSITION)
@@ -18,6 +17,23 @@ v2g MarchingCubes_vert(float4 vertex : POSITION)
     v2g o;
     o.pos = vertex;
     return o;
+}
+
+float edgeInterpolate(float density0, float density1)
+{
+    if (abs(density0) < 0.00001f)
+    {
+        return density0;
+    }
+    if (abs(density1) < 0.00001f)
+    {
+        return density1;
+    }
+    if (abs(density1 - density0) < 0.00001f)
+    {
+        return density0;
+    }
+    return (-density0) / (density1 - density0);
 }
 
 [maxvertexcount(15)]
@@ -42,8 +58,6 @@ void MarchingCubes_geom(point v2g p[1], inout TriangleStream<g2f> triStream)
     int3 faceEdgeIndices;
 
     g2f v;
-    v.color = float4(0, 1, 0, 1);
-
     for (i = 0; i < 16; i +=3)
     {
         faceEdgeIndices.x = _MarchingCubesCaseLookup[caseIndexStart + i];
@@ -60,7 +74,7 @@ void MarchingCubes_geom(point v2g p[1], inout TriangleStream<g2f> triStream)
             int vertIndex0 = _MarchingCubesEdgesToVerts[faceEdgeIndices[j]] * 2;
             int vertIndex1 = vertIndex0 + 1;
 
-            float t = abs(corner_density[vertIndex0]) / abs(corner_density[vertIndex1] - corner_density[vertIndex0]);
+            float t = edgeInterpolate(corner_density[vertIndex0], corner_density[vertIndex1]);
             v.pos = mul(UNITY_MATRIX_VP, lerp(corner_pos_ws[vertIndex0], corner_pos_ws[vertIndex1], t));
             triStream.Append(v);
         }

@@ -9,6 +9,7 @@
     {
         Tags { "RenderType" = "Opaque" }
         LOD 200
+        Cull Off
 
         Pass
         {
@@ -22,13 +23,12 @@
             #pragma geometry MarchingCubes_geom
             #pragma fragment frag
             #pragma target 5.0
-            #pragma enable_d3d11_debug_symbols
 
             float4 _Color;
 
             float4 frag(g2f i) : COLOR
             {
-                return i.color;
+                return _Color;
             }
 
             ENDCG

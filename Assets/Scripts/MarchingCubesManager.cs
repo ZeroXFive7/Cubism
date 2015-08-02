@@ -299,9 +299,16 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     private Material material = null;
     [SerializeField]
     private int blockSize = 32;
+    [SerializeField]
+    private int noiseTextureSize = 16;
+    [SerializeField]
+    private float noiseScale = 1.0f;
 
     [HideInInspector]
     public Mesh VoxelBlockMesh { get; private set; }
+
+    private string perlinNoiseTextureFieldName = "_PerlinNoise";
+    public Texture3D perlinNoiseTexture = null;
 
     private string cubeCasesShaderFieldName = "_MarchingCubesCaseLookup";
     private ComputeBuffer cubeCasesComputeBuffer = null;
@@ -319,8 +326,14 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         cubeCasesComputeBuffer = new ComputeBuffer(cubeCases.GetLength(0) * cubeCases.GetLength(1), sizeof(int));
         cubeCasesComputeBuffer.SetData(cubeCases);
 
-        cornerOffsetsComputeBuffer = new ComputeBuffer(cornerOffsets.GetLength(0), 4 * sizeof(float));
-        cornerOffsetsComputeBuffer.SetData(cornerOffsets);
+        float cornerDistance = 1.0f / (float)blockSize;
+        Vector4[] scaledCornerOffsets = new Vector4[cornerOffsets.Length];
+        for (int i = 0; i < cornerOffsets.Length; ++i)
+        {
+            scaledCornerOffsets[i] = cornerOffsets[i] * cornerDistance;
+        }
+        cornerOffsetsComputeBuffer = new ComputeBuffer(scaledCornerOffsets.GetLength(0), 4 * sizeof(float));
+        cornerOffsetsComputeBuffer.SetData(scaledCornerOffsets);
 
         edgesToVertsComputeBuffer = new ComputeBuffer(edgesToVerts.GetLength(0) * edgesToVerts.GetLength(1), sizeof(int));
         edgesToVertsComputeBuffer.SetData(edgesToVerts);
@@ -330,6 +343,9 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         material.SetBuffer(edgesToVertsFieldName, edgesToVertsComputeBuffer);
 
         VoxelBlockMesh = GenerateVoxelBlockMesh(blockSize);
+
+        perlinNoiseTexture = GeneratePerlinNoiseTexture();
+        material.SetTexture(perlinNoiseTextureFieldName, perlinNoiseTexture);
     }
 
     private void OnDestroy()
@@ -380,5 +396,30 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         mesh.vertices = points;
         mesh.SetIndices(indices, MeshTopology.Points, 0);
         return mesh;
+    }
+
+    private Texture3D GeneratePerlinNoiseTexture()
+    {
+        Texture3D noiseTexture = new Texture3D(noiseTextureSize, noiseTextureSize, noiseTextureSize, TextureFormat.ARGB32, false);
+        Color[] pixels = new Color[noiseTextureSize * noiseTextureSize * noiseTextureSize];
+        for (int i = 0; i < noiseTextureSize; ++i)
+        {
+            for (int j = 0; j < noiseTextureSize; ++j)
+            {
+                for (int k = 0; k < noiseTextureSize; ++k)
+                {
+                    float xIndex = i / (float)noiseTextureSize * noiseScale;
+                    float yIndex = j / (float)noiseTextureSize * noiseScale;
+                    float zIndex = k / (float)noiseTextureSize * noiseScale;
+
+                    float sample = Mathf.PerlinNoise(xIndex, zIndex);
+                    sample = Mathf.PerlinNoise(sample, yIndex);
+                    pixels[k * noiseTextureSize * noiseTextureSize + j * noiseTextureSize + i] = new Color(sample, sample, sample, 1.0f);
+                }
+            }
+        }
+        noiseTexture.SetPixels(pixels);
+        noiseTexture.Apply();
+        return noiseTexture;
     }
 }
