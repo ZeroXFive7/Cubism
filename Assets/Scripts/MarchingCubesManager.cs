@@ -267,14 +267,30 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 
     private readonly Vector4[] cornerOffsets = new Vector4[8]
     {
-        new Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-        new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
-        new Vector4(1.0f, 1.0f, 0.0f, 1.0f),
-        new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
-        new Vector4(0.0f, 0.0f, 1.0f, 1.0f),
-        new Vector4(0.0f, 1.0f, 1.0f, 1.0f),
-        new Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-        new Vector4(1.0f, 0.0f, 1.0f, 1.0f)
+        new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
+        new Vector4(0.0f, 1.0f, 0.0f, 0.0f),
+        new Vector4(1.0f, 1.0f, 0.0f, 0.0f),
+        new Vector4(1.0f, 0.0f, 0.0f, 0.0f),
+        new Vector4(0.0f, 0.0f, 1.0f, 0.0f),
+        new Vector4(0.0f, 1.0f, 1.0f, 0.0f),
+        new Vector4(1.0f, 1.0f, 1.0f, 0.0f),
+        new Vector4(1.0f, 0.0f, 1.0f, 0.0f)
+    };
+
+    private readonly int[,] edgesToVerts = new int[12, 2]
+    {
+        {0, 1},
+        {1, 2},
+        {2, 3},
+        {3, 0},
+        {4, 5},
+        {5, 6},
+        {6, 7},
+        {7, 4},
+        {0, 4},
+        {1, 5},
+        {2, 6},
+        {3, 7}
     };
 
     #endregion
@@ -287,24 +303,31 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     [HideInInspector]
     public Mesh VoxelBlockMesh { get; private set; }
 
-    private string cubeCasesShaderFieldName = "MarchingCubesCaseLookup";
+    private string cubeCasesShaderFieldName = "_MarchingCubesCaseLookup";
     private ComputeBuffer cubeCasesComputeBuffer = null;
 
-    private string cornerOffsetsFieldName = "MarchingCubesCornerOffsets";
+    private string cornerOffsetsFieldName = "_MarchingCubesCornerOffsets";
     private ComputeBuffer cornerOffsetsComputeBuffer = null;
+
+    private string edgesToVertsFieldName = "_MarchingCubesEdgesToVerts";
+    private ComputeBuffer edgesToVertsComputeBuffer = null;
 
     private void Awake()
     {
         Instance = this;
 
-        cubeCasesComputeBuffer = new ComputeBuffer(256 * 16, sizeof(int));
+        cubeCasesComputeBuffer = new ComputeBuffer(cubeCases.GetLength(0) * cubeCases.GetLength(1), sizeof(int));
         cubeCasesComputeBuffer.SetData(cubeCases);
 
-        cornerOffsetsComputeBuffer = new ComputeBuffer(8, 4 * sizeof(float));
+        cornerOffsetsComputeBuffer = new ComputeBuffer(cornerOffsets.GetLength(0), 4 * sizeof(float));
         cornerOffsetsComputeBuffer.SetData(cornerOffsets);
+
+        edgesToVertsComputeBuffer = new ComputeBuffer(edgesToVerts.GetLength(0) * edgesToVerts.GetLength(1), sizeof(int));
+        edgesToVertsComputeBuffer.SetData(edgesToVerts);
 
         material.SetBuffer(cubeCasesShaderFieldName, cubeCasesComputeBuffer);
         material.SetBuffer(cornerOffsetsFieldName, cornerOffsetsComputeBuffer);
+        material.SetBuffer(edgesToVertsFieldName, edgesToVertsComputeBuffer);
 
         VoxelBlockMesh = GenerateVoxelBlockMesh(blockSize);
     }
@@ -324,6 +347,11 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         if (cornerOffsetsComputeBuffer != null)
         {
             cornerOffsetsComputeBuffer.Dispose();
+        }
+
+        if (edgesToVertsComputeBuffer != null)
+        {
+            edgesToVertsComputeBuffer.Dispose();
         }
     }
 
