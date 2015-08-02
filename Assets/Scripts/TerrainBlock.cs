@@ -6,10 +6,22 @@ using System.Collections;
 public class TerrainBlock : MonoBehaviour
 {
     private MeshFilter meshFilter = null;
+    private MeshRenderer meshRenderer = null;
 
     void Start()
     {
         meshFilter = GetComponent<MeshFilter>();
-        meshFilter.sharedMesh = MarchingCubesManager.Instance.VoxelBlockMesh;
+        meshRenderer = GetComponent<MeshRenderer>();
+
+        CPUTerrainMeshGenerator meshGenerator = GetComponent<CPUTerrainMeshGenerator>();
+        if (meshGenerator != null)
+        {
+            meshFilter.sharedMesh = meshGenerator.VoxelBlockMesh;
+            meshRenderer.material = meshGenerator.Material;
+        }
+        else
+        {
+            meshFilter.sharedMesh = MarchingCubesManager.Instance.VoxelBlockPointMesh;
+        }
     }
 }

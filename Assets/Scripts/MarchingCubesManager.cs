@@ -5,7 +5,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 {
     #region Constants
 
-    private readonly int[,] cubeCases = new int[256, 16]
+    public readonly int[,] cubeCases = new int[256, 16]
     {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -265,7 +265,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
     };
 
-    private readonly int[] cornerMasks = new int[256]
+    public readonly int[] cornerMasks = new int[256]
     {
         0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
         0x190, 0x099, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
@@ -297,7 +297,9 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         new Vector4(0.0f, 1.0f, 0.0f, 0.0f)
     };
 
-    private readonly int[,] edgesToVerts = new int[12, 2]
+    public Vector4[] scaledCornerOffsets = new Vector4[8];
+         
+    public readonly int[,] edgesToVerts = new int[12, 2]
     {
         {0, 1},
         {1, 2},
@@ -325,7 +327,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     private float noiseScale = 1.0f;
 
     [HideInInspector]
-    public Mesh VoxelBlockMesh { get; private set; }
+    public Mesh VoxelBlockPointMesh { get; private set; }
 
     private string perlinNoiseTextureFieldName = "_PerlinNoise";
     public Texture3D perlinNoiseTexture = null;
@@ -353,7 +355,6 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         cubeCasesComputeBuffer.SetData(cubeCases);
 
         float cornerDistance = 1.0f / (float)blockSize;
-        Vector4[] scaledCornerOffsets = new Vector4[cornerOffsets.Length];
         for (int i = 0; i < cornerOffsets.Length; ++i)
         {
             scaledCornerOffsets[i] = cornerOffsets[i] * cornerDistance;
@@ -369,7 +370,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         material.SetBuffer(cornerOffsetsFieldName, cornerOffsetsComputeBuffer);
         material.SetBuffer(edgesToVertsFieldName, edgesToVertsComputeBuffer);
 
-        VoxelBlockMesh = GenerateVoxelBlockMesh(blockSize);
+        VoxelBlockPointMesh = GenerateVoxelBlockMesh(blockSize);
 
         perlinNoiseTexture = GeneratePerlinNoiseTexture();
         material.SetTexture(perlinNoiseTextureFieldName, perlinNoiseTexture);
@@ -377,9 +378,9 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 
     private void OnDestroy()
     {
-        if (VoxelBlockMesh != null)
+        if (VoxelBlockPointMesh != null)
         {
-            Destroy(VoxelBlockMesh);
+            Destroy(VoxelBlockPointMesh);
         }
 
         if (cornerMasksComputeBuffer != null)
