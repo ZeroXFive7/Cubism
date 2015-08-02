@@ -265,7 +265,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
     };
 
-    public readonly int[] cornerMasks = new int[256]
+    public readonly int[] edgeMasks = new int[256]
     {
         0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
         0x190, 0x099, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
@@ -322,7 +322,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     [SerializeField]
     private int blockSize = 32;
     [SerializeField]
-    private int noiseTextureSize = 16;
+    public int noiseTextureSize = 16;
     [SerializeField]
     private float noiseScale = 1.0f;
 
@@ -331,9 +331,10 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 
     private string perlinNoiseTextureFieldName = "_PerlinNoise";
     public Texture3D perlinNoiseTexture = null;
+    public Color[] PerlinNoisePixels = null;
 
-    private string cornerMasksFieldName = "_MarchingCubesCornerMasks";
-    private ComputeBuffer cornerMasksComputeBuffer = null;
+    private string edgeMasksFieldName = "_MarchingCubesEdgeMasks";
+    private ComputeBuffer edgeMasksComputeBuffer = null;
 
     private string cubeCasesShaderFieldName = "_MarchingCubesCaseLookup";
     private ComputeBuffer cubeCasesComputeBuffer = null;
@@ -348,8 +349,8 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     {
         Instance = this;
 
-        cornerMasksComputeBuffer = new ComputeBuffer(cornerMasks.GetLength(0), sizeof(int));
-        cornerMasksComputeBuffer.SetData(cornerMasks);
+        edgeMasksComputeBuffer = new ComputeBuffer(edgeMasks.GetLength(0), sizeof(int));
+        edgeMasksComputeBuffer.SetData(edgeMasks);
 
         cubeCasesComputeBuffer = new ComputeBuffer(cubeCases.GetLength(0) * cubeCases.GetLength(1), sizeof(int));
         cubeCasesComputeBuffer.SetData(cubeCases);
@@ -365,7 +366,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
         edgesToVertsComputeBuffer = new ComputeBuffer(edgesToVerts.GetLength(0) * edgesToVerts.GetLength(1), sizeof(int));
         edgesToVertsComputeBuffer.SetData(edgesToVerts);
 
-        material.SetBuffer(cornerMasksFieldName, cornerMasksComputeBuffer);
+        material.SetBuffer(edgeMasksFieldName, edgeMasksComputeBuffer);
         material.SetBuffer(cubeCasesShaderFieldName, cubeCasesComputeBuffer);
         material.SetBuffer(cornerOffsetsFieldName, cornerOffsetsComputeBuffer);
         material.SetBuffer(edgesToVertsFieldName, edgesToVertsComputeBuffer);
@@ -383,9 +384,9 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
             Destroy(VoxelBlockPointMesh);
         }
 
-        if (cornerMasksComputeBuffer != null)
+        if (edgeMasksComputeBuffer != null)
         {
-            cornerMasksComputeBuffer.Dispose();
+            edgeMasksComputeBuffer.Dispose();
         }
 
         if (cubeCasesComputeBuffer != null)
@@ -434,7 +435,7 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
     private Texture3D GeneratePerlinNoiseTexture()
     {
         Texture3D noiseTexture = new Texture3D(noiseTextureSize, noiseTextureSize, noiseTextureSize, TextureFormat.ARGB32, false);
-        Color[] pixels = new Color[noiseTextureSize * noiseTextureSize * noiseTextureSize];
+        PerlinNoisePixels = new Color[noiseTextureSize * noiseTextureSize * noiseTextureSize];
         for (int i = 0; i < noiseTextureSize; ++i)
         {
             for (int j = 0; j < noiseTextureSize; ++j)
@@ -447,11 +448,11 @@ public class MarchingCubesManager : SingletonMonobehaviour<MarchingCubesManager>
 
                     float sample = Mathf.PerlinNoise(xIndex, zIndex);
                     sample = Mathf.PerlinNoise(sample, yIndex);
-                    pixels[k * noiseTextureSize * noiseTextureSize + j * noiseTextureSize + i] = new Color(sample, sample, sample, 1.0f);
+                    PerlinNoisePixels[k * noiseTextureSize * noiseTextureSize + j * noiseTextureSize + i] = new Color(sample, sample, sample, 1.0f);
                 }
             }
         }
-        noiseTexture.SetPixels(pixels);
+        noiseTexture.SetPixels(PerlinNoisePixels);
         noiseTexture.Apply();
         return noiseTexture;
     }

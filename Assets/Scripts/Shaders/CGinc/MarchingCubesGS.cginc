@@ -1,5 +1,5 @@
 ﻿StructuredBuffer<int> _MarchingCubesCaseLookup;
-StructuredBuffer<int> _MarchingCubesCornerMasks;
+StructuredBuffer<int> _MarchingCubesEdgeMasks;
 StructuredBuffer<float4> _MarchingCubesCornerOffsets;
 StructuredBuffer<int> _MarchingCubesEdgesToVerts;
 
@@ -22,19 +22,24 @@ v2g MarchingCubes_vert(float4 vertex : POSITION)
 
 float edgeInterpolate(float density0, float density1)
 {
+    float result = 0.0f;
     if (abs(density0) < 0.00001f)
     {
-        return density0;
+        result = 0.0f;
     }
-    if (abs(density1) < 0.00001f)
+    else if (abs(density1) < 0.00001f)
     {
-        return density1;
+        result = 1.0f;
     }
-    if (abs(density1 - density0) < 0.00001f)
+    else if (abs(density1 - density0) < 0.00001f)
     {
-        return density0;
+        result = 0.0f;
     }
-    return (-density0) / (density1 - density0);
+    else
+    {
+        result = (-density0) / (density1 - density0);
+    }
+    return result;
 }
 
 [maxvertexcount(15)]
@@ -53,10 +58,10 @@ void MarchingCubes_geom(point v2g p[1], inout TriangleStream<g2f> triStream)
         case_key |= ((int)(corner_density[corner] < 0) << corner);
     }
 
-    int corner_mask = _MarchingCubesCornerMasks[case_key];
+    int edge_mask = _MarchingCubesEdgeMasks[case_key];
 
     // Entirely inside or entirely outside isosurface.  Early out.
-    if (corner_mask == 0)
+    if (edge_mask == 0)
     {
         return;
     }
@@ -65,12 +70,11 @@ void MarchingCubes_geom(point v2g p[1], inout TriangleStream<g2f> triStream)
     float4 edge_vertices[12];
     for (int edge = 0; edge < 12; ++edge)
     {
-        if ((corner_mask & (1 << edge)) != 0)
+        if ((edge_mask & (1 << edge)) != 0)
         {
             int corner_index0 = _MarchingCubesEdgesToVerts[edge * 2];
             int corner_index1 = _MarchingCubesEdgesToVerts[edge * 2 + 1];
             float t = edgeInterpolate(corner_density[corner_index0], corner_density[corner_index1]);
-
             edge_vertices[edge] = mul(UNITY_MATRIX_VP, lerp(corner_pos_ws[corner_index0], corner_pos_ws[corner_index1], t));
         }
     }
@@ -85,13 +89,18 @@ void MarchingCubes_geom(point v2g p[1], inout TriangleStream<g2f> triStream)
         }
 
         g2f v;
-        v.pos = edge_vertices[_MarchingCubesCaseLookup[case_index_start + i]];
+        int index = _MarchingCubesCaseLookup[case_index_start + i];
+        v.pos = edge_vertices[index];
         triStream.Append(v);
 
-        v.pos = edge_vertices[_MarchingCubesCaseLookup[case_index_start + i + 1]];
+        index = _MarchingCubesCaseLookup[case_index_start + i + 1];
+        v.pos = edge_vertices[index];
         triStream.Append(v);
 
-        v.pos = edge_vertices[_MarchingCubesCaseLookup[case_index_start + i + 2]];
+        index = _MarchingCubesCaseLookup[case_index_start + i + 2];
+        v.pos = edge_vertices[index];
         triStream.Append(v);
+
+        triStream.RestartStrip();
     }
 }
