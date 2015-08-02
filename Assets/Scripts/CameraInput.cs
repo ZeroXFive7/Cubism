@@ -13,6 +13,8 @@ public class CameraInput : MonoBehaviour
     public float minimumY = -60F;
     public float maximumY = 60F;
 
+    public float MovementSpeed = 1.0f;
+
     float rotationY = 0F;
 
     void Update()
@@ -37,6 +39,9 @@ public class CameraInput : MonoBehaviour
 
             transform.localEulerAngles = new Vector3(-rotationY, transform.localEulerAngles.y, 0);
         }
+        
+        Vector3 input = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Strafe"), Input.GetAxis("Vertical"));
+        transform.Translate(input * Time.deltaTime * MovementSpeed, Space.Self);
     }
 
     void Start()
