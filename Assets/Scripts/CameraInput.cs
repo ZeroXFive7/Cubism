@@ -19,6 +19,13 @@ public class CameraInput : MonoBehaviour
 
     void Update()
     {
+		if (Cursor.lockState != CursorLockMode.Locked) {
+			if (Input.GetMouseButtonDown(0)) {
+				Cursor.visible = false;
+				Cursor.lockState = CursorLockMode.Locked;
+			}
+			return;
+		}
         if (axes == RotationAxes.MouseXAndY)
         {
             float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
